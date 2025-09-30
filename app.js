@@ -29,8 +29,10 @@ function app() {
     showNotifications: false,
     showEventModal: false,
     showDayEventsModal: false,
+    showStudentClubModal: false,
     selectedEvent: null,
     selectedDayEvents: [],
+    studentClubSelection: "",
     calendarView: "month",
     // Authentication & Membership
     currentUser: null,
@@ -177,6 +179,14 @@ function app() {
       return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     },
 
+    // Role-aware selected club for visibility
+    get effectiveSelectedClub() {
+      if (this.isAdmin()) return "all";
+      if (this.isClubHead()) return this.currentUser?.club || null;
+      if (this.isStudent()) return this.memberships[this.currentUser?.username] || null;
+      return this.selectedClub;
+    },
+
     get calendarDays() {
       const year = this.currentDate.getFullYear();
       const month = this.currentDate.getMonth();
@@ -240,6 +250,10 @@ function app() {
       this.showAlert = true;
       this.alertMessage = `Welcome, ${this.currentUser.username}!`;
       setTimeout(() => { this.showAlert = false; }, 2000);
+      // Prompt first-time students to choose a club
+      if (this.isStudent() && !this.memberships[this.currentUser.username]) {
+        this.showStudentClubModal = true;
+      }
     },
     logout() {
       this.currentUser = null;
@@ -335,27 +349,30 @@ function app() {
 
     getTodayEvents() {
       const today = this.dateToLocalYMD(new Date());
+      const club = this.effectiveSelectedClub;
       return this.events.filter(event => 
         event.date === today && 
-        (this.selectedClub === "all" || event.club === this.selectedClub)
+        (club === "all" || event.club === club)
       );
     },
 
     getUpcomingEvents() {
       const today = this.dateToLocalYMD(new Date());
+      const club = this.effectiveSelectedClub;
       return this.events
         .filter(event => 
           event.date >= today && 
-          (this.selectedClub === "all" || event.club === this.selectedClub)
+          (club === "all" || event.club === club)
         )
         .sort((a, b) => a.date.localeCompare(b.date));
     },
 
     getCompletedEvents() {
       const today = this.dateToLocalYMD(new Date());
+      const club = this.effectiveSelectedClub;
       return this.events.filter(event => 
         event.date < today && 
-        (this.selectedClub === "all" || event.club === this.selectedClub)
+        (club === "all" || event.club === club)
       );
     },
 
@@ -469,18 +486,20 @@ function app() {
     hasEvent(day) {
       if (!day) return false;
       const ymd = this.dateToLocalYMD(new Date(this.currentYear, this.currentDate.getMonth(), day));
+      const club = this.effectiveSelectedClub;
       return this.events.some(
         (event) =>
           event.date === ymd &&
-          (this.selectedClub === "all" || event.club === this.selectedClub)
+          (club === "all" || event.club === club)
       );
     },
 
     getEventsForDate(dateYMD) {
+      const club = this.effectiveSelectedClub;
       return this.events.filter(
         (event) =>
           event.date === dateYMD &&
-          (this.selectedClub === "all" || event.club === this.selectedClub)
+          (club === "all" || event.club === club)
       );
     },
 
@@ -629,6 +648,9 @@ function app() {
         this.currentUser = savedUser;
         const club = this.getUserClub();
         this.selectedClub = this.isAdmin() ? "all" : (club || null);
+        if (this.isStudent() && !this.memberships[this.currentUser.username]) {
+          this.showStudentClubModal = true;
+        }
       } else {
         this.currentPage = "login";
       }
@@ -657,5 +679,18 @@ function app() {
     dateToLocalYMD: (date) => dateToLocalYMD(date),
     ymdToDateLocal: (ymd) => ymdToDateLocal(ymd),
     addDaysLocal: (date, days) => addDaysLocal(date, days),
+
+    // Student first-time registration club selection
+    confirmStudentClub() {
+      if (!this.isStudent()) { this.showStudentClubModal = false; return; }
+      if (!this.studentClubSelection) return;
+      this.memberships[this.currentUser.username] = this.studentClubSelection;
+      this.saveJoinData();
+      this.selectedClub = this.studentClubSelection;
+      this.showStudentClubModal = false;
+      this.showAlert = true;
+      this.alertMessage = `Club set to ${this.getClubName(this.studentClubSelection)}.`;
+      setTimeout(() => { this.showAlert = false; }, 2000);
+    },
   };
 }

@@ -127,7 +127,7 @@
                     </button>
                     
                     <div class="club-selector">
-                        <select x-model="selectedClub" @change="filterEvents()" :disabled="isClubHead()">
+                        <select x-model="selectedClub" @change="filterEvents()" :disabled="isClubHead() || isStudent()">
                             <option value="all">All Clubs</option>
                             <option value="astronomy">🔭 Astronomy Club</option>
                             <option value="sports">⚽ Sports Club</option>
@@ -142,6 +142,7 @@
                             <option value="cybersec">💻 Cybersec Club</option>
                             
                         </select>
+                        <div x-show="isStudent()" style="color:#64748b; font-size:.85rem; margin-top:.25rem;">Club visibility locked to your membership</div>
                     </div>
                 </div>
             </div>
@@ -743,6 +744,35 @@
                         </div>
                     </template>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Club Selection Modal -->
+    <div class="modal" x-show="showStudentClubModal && currentUser && isStudent()" @click.away="showStudentClubModal = false">
+        <div class="modal-content event-details-modal">
+            <div class="modal-header">
+                <h3>Select Your Club</h3>
+                <button @click="showStudentClubModal = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label><i class="fas fa-users"></i> Choose a club to view events</label>
+                    <select x-model="studentClubSelection">
+                        <option value="">Select Club</option>
+                        <option value="astronomy">🔭 Astronomy Club</option>
+                        <option value="sports">⚽ Sports Club</option>
+                        <option value="gdg">💻 GDG Club</option>
+                        <option value="music">🎵 Music Club</option>
+                        <option value="drama">🎭 Drama Club</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @click="showStudentClubModal = false">Cancel</button>
+                <button class="btn-primary" @click="confirmStudentClub()"><i class="fas fa-check"></i> Confirm</button>
             </div>
         </div>
     </div>
