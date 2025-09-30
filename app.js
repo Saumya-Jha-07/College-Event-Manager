@@ -35,6 +35,39 @@ function app() {
     studentClubSelection: "",
     calendarView: "month",
     showAllEvents: false,
+    // User Management
+    userManagementTab: "users",
+    userSearchQuery: "",
+    userRoleFilter: "",
+    userBranchFilter: "",
+    selectedUsers: [],
+    showEditUserModal: false,
+    editingUser: {
+      username: "",
+      password: "",
+      role: "",
+      club: "",
+      branch: "",
+      email: ""
+    },
+    newUser: {
+      username: "",
+      password: "",
+      role: "",
+      club: "",
+      branch: "",
+      email: ""
+    },
+    newBranch: {
+      name: "",
+      code: "",
+      description: ""
+    },
+    branches: [
+      { id: 1, name: "Information Technology", code: "IT", description: "Computer Science and Information Technology" },
+      { id: 2, name: "Computer Science Engineering", code: "CSE", description: "Computer Science and Engineering" },
+      { id: 3, name: "Electronics and Telecommunication", code: "E&TC", description: "Electronics and Telecommunication Engineering" }
+    ],
     // Authentication & Membership
     currentUser: null,
     loginForm: { username: "", password: "" },
@@ -199,6 +232,32 @@ function app() {
         .sort((a, b) => (a.date + "T" + a.time).localeCompare(b.date + "T" + b.time));
     },
 
+    get filteredUsers() {
+      let filtered = this.users;
+      
+      // Search filter
+      if (this.userSearchQuery) {
+        const query = this.userSearchQuery.toLowerCase();
+        filtered = filtered.filter(user => 
+          user.username.toLowerCase().includes(query) ||
+          user.email.toLowerCase().includes(query) ||
+          user.branch.toLowerCase().includes(query)
+        );
+      }
+      
+      // Role filter
+      if (this.userRoleFilter) {
+        filtered = filtered.filter(user => user.role === this.userRoleFilter);
+      }
+      
+      // Branch filter
+      if (this.userBranchFilter) {
+        filtered = filtered.filter(user => user.branch === this.userBranchFilter);
+      }
+      
+      return filtered;
+    },
+
     // Role-aware selected club for visibility
     get effectiveSelectedClub() {
       if (this.isAdmin()) return "all";
@@ -347,10 +406,10 @@ function app() {
         dashboard: "Dashboard",
         calendar: "Calendar",
         events: "Add Event",
-        analytics: "Analytics",
         about: "About",
         contact: "Contact",
         requests: "Join Requests",
+        userManagement: "User Management",
         login: "Login",
       };
       return titles[this.currentPage] || "Dashboard";
@@ -604,7 +663,7 @@ function app() {
       URL.revokeObjectURL(url);
       
       this.showAlert = true;
-      this.alertMessage = "Events exported successfully!";
+      this.alertMessage = "I²IT Events exported successfully!";
       setTimeout(() => {
         this.showAlert = false;
       }, 3000);
@@ -662,8 +721,13 @@ function app() {
       const savedUser = JSON.parse(localStorage.getItem("i2it-current-user"));
       const savedRequests = JSON.parse(localStorage.getItem("i2it-join-requests"));
       const savedMemberships = JSON.parse(localStorage.getItem("i2it-memberships"));
+      const savedUsers = JSON.parse(localStorage.getItem("i2it-users"));
+      const savedBranches = JSON.parse(localStorage.getItem("i2it-branches"));
+      
       if (Array.isArray(savedRequests)) this.joinRequests = savedRequests;
       if (savedMemberships && typeof savedMemberships === "object") this.memberships = savedMemberships;
+      if (Array.isArray(savedUsers)) this.users = savedUsers;
+      if (Array.isArray(savedBranches)) this.branches = savedBranches;
       if (savedUser) {
         this.currentUser = savedUser;
         const club = this.getUserClub();
@@ -716,6 +780,305 @@ function app() {
       this.showAlert = true;
       this.alertMessage = `Club set to ${this.getClubName(this.studentClubSelection)}.`;
       setTimeout(() => { this.showAlert = false; }, 2000);
+    },
+
+    // User Management Functions
+    createUser() {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can create users.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      // Check if username already exists
+      const existingUser = this.users.find(u => u.username === this.newUser.username);
+      if (existingUser) {
+        this.showAlert = true;
+        this.alertMessage = "Username already exists.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      // Validate required fields
+      if (!this.newUser.username || !this.newUser.password || !this.newUser.role || !this.newUser.branch) {
+        this.showAlert = true;
+        this.alertMessage = "Please fill in all required fields.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      // Create new user
+      const user = {
+        username: this.newUser.username,
+        password: this.newUser.password,
+        role: this.newUser.role,
+        branch: this.newUser.branch,
+        email: this.newUser.email || ""
+      };
+
+      // Add club if role is clubHead
+      if (this.newUser.role === 'clubHead' && this.newUser.club) {
+        user.club = this.newUser.club;
+      }
+
+      this.users.push(user);
+      this.saveUsers();
+      this.resetUserForm();
+      
+      this.showAlert = true;
+      this.alertMessage = `User "${user.username}" created successfully!`;
+      setTimeout(() => { this.showAlert = false; }, 3000);
+    },
+
+    deleteUser(user) {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can delete users.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      if (user.username === 'admin') {
+        this.showAlert = true;
+        this.alertMessage = "Cannot delete the main administrator.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      this.users = this.users.filter(u => u.username !== user.username);
+      this.saveUsers();
+      
+      this.showAlert = true;
+      this.alertMessage = `User "${user.username}" deleted successfully!`;
+      setTimeout(() => { this.showAlert = false; }, 3000);
+    },
+
+    resetUserForm() {
+      this.newUser = {
+        username: "",
+        password: "",
+        role: "",
+        club: "",
+        branch: "",
+        email: ""
+      };
+    },
+
+    updateRoleOptions() {
+      // Reset club selection when role changes
+      if (this.newUser.role !== 'clubHead') {
+        this.newUser.club = "";
+      }
+    },
+
+    addBranch() {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can add branches.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      if (!this.newBranch.name || !this.newBranch.code) {
+        this.showAlert = true;
+        this.alertMessage = "Please fill in branch name and code.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      // Check if branch code already exists
+      const existingBranch = this.branches.find(b => b.code === this.newBranch.code);
+      if (existingBranch) {
+        this.showAlert = true;
+        this.alertMessage = "Branch code already exists.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      const branch = {
+        id: Date.now(),
+        name: this.newBranch.name,
+        code: this.newBranch.code,
+        description: this.newBranch.description || ""
+      };
+
+      this.branches.push(branch);
+      this.saveBranches();
+      
+      this.newBranch = { name: "", code: "", description: "" };
+      
+      this.showAlert = true;
+      this.alertMessage = `Branch "${branch.name}" added successfully!`;
+      setTimeout(() => { this.showAlert = false; }, 3000);
+    },
+
+    editBranch(branch) {
+      // For now, just show an alert. In a real app, you'd open an edit modal
+      this.showAlert = true;
+      this.alertMessage = "Branch editing functionality coming soon!";
+      setTimeout(() => { this.showAlert = false; }, 2500);
+    },
+
+    deleteBranch(branch) {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can delete branches.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      this.branches = this.branches.filter(b => b.id !== branch.id);
+      this.saveBranches();
+      
+      this.showAlert = true;
+      this.alertMessage = `Branch "${branch.name}" deleted successfully!`;
+      setTimeout(() => { this.showAlert = false; }, 3000);
+    },
+
+    saveUsers() {
+      localStorage.setItem("i2it-users", JSON.stringify(this.users));
+    },
+
+    saveBranches() {
+      localStorage.setItem("i2it-branches", JSON.stringify(this.branches));
+    },
+
+    // Enhanced User Management Methods
+    getUsersByRole(role) {
+      return this.users.filter(user => user.role === role);
+    },
+
+    editUser(user) {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can edit users.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      this.editingUser = { ...user };
+      this.showEditUserModal = true;
+    },
+
+    updateUser() {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can update users.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      const userIndex = this.users.findIndex(u => u.username === this.editingUser.username);
+      if (userIndex === -1) {
+        this.showAlert = true;
+        this.alertMessage = "User not found.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      // Update user data
+      this.users[userIndex] = { ...this.editingUser };
+      
+      // Only update password if provided
+      if (!this.editingUser.password) {
+        // Keep existing password
+        delete this.users[userIndex].password;
+      }
+
+      this.saveUsers();
+      this.showEditUserModal = false;
+      
+      this.showAlert = true;
+      this.alertMessage = `User "${this.editingUser.username}" updated successfully!`;
+      setTimeout(() => { this.showAlert = false; }, 3000);
+    },
+
+    resetUserPassword(user) {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can reset passwords.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      // Generate a random password
+      const newPassword = Math.random().toString(36).slice(-8);
+      
+      const userIndex = this.users.findIndex(u => u.username === user.username);
+      if (userIndex !== -1) {
+        this.users[userIndex].password = newPassword;
+        this.saveUsers();
+        
+        this.showAlert = true;
+        this.alertMessage = `Password reset for "${user.username}". New password: ${newPassword}`;
+        setTimeout(() => { this.showAlert = false; }, 5000);
+      }
+    },
+
+    bulkDeleteUsers() {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can delete users.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      if (this.selectedUsers.length === 0) {
+        this.showAlert = true;
+        this.alertMessage = "No users selected.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      // Remove admin from selection
+      const usersToDelete = this.selectedUsers.filter(username => username !== 'admin');
+      
+      this.users = this.users.filter(user => !usersToDelete.includes(user.username));
+      this.saveUsers();
+      this.clearSelection();
+      
+      this.showAlert = true;
+      this.alertMessage = `${usersToDelete.length} users deleted successfully!`;
+      setTimeout(() => { this.showAlert = false; }, 3000);
+    },
+
+    bulkResetPasswords() {
+      if (!this.isAdmin()) {
+        this.showAlert = true;
+        this.alertMessage = "Only administrators can reset passwords.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      if (this.selectedUsers.length === 0) {
+        this.showAlert = true;
+        this.alertMessage = "No users selected.";
+        setTimeout(() => { this.showAlert = false; }, 2500);
+        return;
+      }
+
+      const resetPasswords = [];
+      this.selectedUsers.forEach(username => {
+        const userIndex = this.users.findIndex(u => u.username === username);
+        if (userIndex !== -1) {
+          const newPassword = Math.random().toString(36).slice(-8);
+          this.users[userIndex].password = newPassword;
+          resetPasswords.push(`${username}: ${newPassword}`);
+        }
+      });
+
+      this.saveUsers();
+      this.clearSelection();
+      
+      this.showAlert = true;
+      this.alertMessage = `Passwords reset for ${resetPasswords.length} users. Check console for details.`;
+      console.log('Reset passwords:', resetPasswords);
+      setTimeout(() => { this.showAlert = false; }, 5000);
+    },
+
+    clearSelection() {
+      this.selectedUsers = [];
     },
   };
 }

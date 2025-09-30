@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>I²IT College Event Manager</title>
+    <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -12,7 +13,9 @@
     <!-- Loading Screen -->
     <div class="loading-screen" x-show="isLoading" x-transition>
         <div class="loader">
-            <img src="logo.png" alt="I²IT Logo" class="college-logo" style="width: 80px; height: 80px; margin-bottom: 1rem;">
+            <div class="logo-container">
+                <img src="logo.png" alt="I²IT Logo" class="college-logo loading-logo">
+            </div>
             <div class="loader-circle"></div>
             <h3>I²IT Event Club Manager</h3>
             <p>Loading your events...</p>
@@ -24,8 +27,7 @@
         <div class="sidebar-header">
             <div class="logo">
                 <img src="logo.png" alt="I²IT Logo" class="college-logo">
-                <i class="fas fa-calendar-alt"></i>
-                <span>- I²IT Events</span>
+                <span>I²IT Events</span>
             </div>
             <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
                 <i class="fas fa-times"></i>
@@ -51,7 +53,6 @@
             </a>
             <a href="#" @click.prevent="currentPage = 'calendar'; sidebarOpen = false" 
                :class="{ active: currentPage === 'calendar' }">
-                <i class="fas fa-calendar"></i>
                 <span>Calendar</span>
             </a>
             <a href="#" @click.prevent="currentPage = 'events'; sidebarOpen = false" 
@@ -59,11 +60,6 @@
                :class="{ active: currentPage === 'events' }">
                 <i class="fas fa-plus-circle"></i>
                 <span>Add Event</span>
-            </a>
-            <a href="#" @click.prevent="currentPage = 'analytics'; sidebarOpen = false" 
-               :class="{ active: currentPage === 'analytics' }">
-                <i class="fas fa-chart-bar"></i>
-                <span>Analytics</span>
             </a>
             <a href="#" @click.prevent="currentPage = 'about'; sidebarOpen = false" 
                :class="{ active: currentPage === 'about' }">
@@ -78,6 +74,10 @@
             <a href="#" @click.prevent="currentPage = 'requests'; sidebarOpen = false" x-show="canManageRequests()" :class="{ active: currentPage === 'requests' }">
                 <i class="fas fa-user-check"></i>
                 <span>Requests</span>
+            </a>
+            <a href="#" @click.prevent="currentPage = 'userManagement'; sidebarOpen = false" x-show="isAdmin()" :class="{ active: currentPage === 'userManagement' }">
+                <i class="fas fa-users-cog"></i>
+                <span>User Management</span>
             </a>
             <a href="#" @click.prevent="currentPage = 'login'; sidebarOpen = false" x-show="!currentUser" :class="{ active: currentPage === 'login' }">
                 <i class="fas fa-sign-in-alt"></i>
@@ -110,6 +110,9 @@
                 <button class="menu-toggle" @click="sidebarOpen = !sidebarOpen">
                     <i class="fas fa-bars"></i>
                 </button>
+                <div class="header-logo">
+                    <img src="logo.png" alt="I²IT Logo" class="college-logo header-logo-img">
+                </div>
                 <div class="breadcrumb">
                     <span x-text="getPageTitle()"></span>
                 </div>
@@ -200,7 +203,10 @@
             <!-- Dashboard Page -->
             <div class="page" x-show="currentPage === 'dashboard'">
                 <div class="dashboard-header">
-                    <h1>Welcome back, Saumya!</h1>
+                    <div class="dashboard-logo-container">
+                        <img src="logo.png" alt="I²IT Logo" class="college-logo dashboard-logo">
+                    </div>
+                    <h1>Welcome back, <span x-text="currentUser?.username || 'User'"></span>!</h1>
                     <p>Here's what's happening at I²IT today</p>
                 </div>
 
@@ -284,7 +290,6 @@
                                 <span>Add New Event</span>
                             </button>
                             <button class="action-btn" @click="currentPage = 'calendar'">
-                                <i class="fas fa-calendar-alt"></i>
                                 <span>View Calendar</span>
                             </button>
                             <button class="action-btn" @click="exportEvents()">
@@ -541,51 +546,6 @@
                 </div>
             </div>
 
-            <!-- Analytics Page -->
-            <div class="page" x-show="currentPage === 'analytics'">
-                <div class="analytics-header">
-                    <img src="logo.png" alt="I²IT Logo" class="college-logo" style="width: 80px; height: 80px; margin-bottom: 1rem;">
-                    <h2>Event Analytics</h2>
-                    <p>Insights into I²IT College events</p>
-                </div>
-
-                <div class="analytics-grid">
-                    <div class="analytics-card">
-                        <h3>Events by Club</h3>
-                        <div class="chart-container">
-                            <div class="chart-bar" style="height: 60%; background: var(--astronomy-color);">
-                                <span>Astronomy</span>
-                            </div>
-                            <div class="chart-bar" style="height: 80%; background: var(--sports-color);">
-                                <span>Sports</span>
-                            </div>
-                            <div class="chart-bar" style="height: 70%; background: var(--gdg-color);">
-                                <span>GDG</span>
-                            </div>
-                            <div class="chart-bar" style="height: 50%; background: var(--music-color);">
-                                <span>Music</span>
-                            </div>
-                            <div class="chart-bar" style="height: 40%; background: var(--drama-color);">
-                                <span>Drama</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="analytics-card">
-                        <h3>Monthly Overview</h3>
-                        <div class="monthly-stats">
-                            <div class="stat-item">
-                                <span class="stat-number" x-text="getThisMonthEvents().length"></span>
-                                <span class="stat-label">This Month</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-number" x-text="getNextMonthEvents().length"></span>
-                                <span class="stat-label">Next Month</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- About Page -->
             <div class="page" x-show="currentPage === 'about'">
@@ -638,6 +598,265 @@
                                     <span>Drama Club</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Management Page -->
+            <div class="page" x-show="currentPage === 'userManagement'">
+                <div class="event-form-container">
+                    <div class="form-header">
+                        <div class="logo-container-enhanced">
+                            <img src="logo.png" alt="I²IT Logo" class="college-logo-enhanced">
+                        </div>
+                        <h2>User Management</h2>
+                        <p>Manage users, branches, and permissions</p>
+                    </div>
+                    
+                    <div class="user-management-tabs">
+                        <div class="tab-buttons">
+                            <button class="tab-btn" :class="{ active: userManagementTab === 'users' }" @click="userManagementTab = 'users'">
+                                <i class="fas fa-users"></i> Users
+                            </button>
+                            <button class="tab-btn" :class="{ active: userManagementTab === 'branches' }" @click="userManagementTab = 'branches'">
+                                <i class="fas fa-building"></i> Branches
+                            </button>
+                            <button class="tab-btn" :class="{ active: userManagementTab === 'create' }" @click="userManagementTab = 'create'">
+                                <i class="fas fa-user-plus"></i> Create User
+                            </button>
+                        </div>
+
+                        <!-- Users Tab -->
+                        <div class="tab-content" x-show="userManagementTab === 'users'">
+                            <div class="users-header">
+                                <h3>All Users</h3>
+                                <div class="users-controls">
+                                    <div class="search-box">
+                                        <i class="fas fa-search"></i>
+                                        <input type="text" x-model="userSearchQuery" placeholder="Search users..." class="search-input">
+                                    </div>
+                                    <div class="filter-controls">
+                                        <select x-model="userRoleFilter" class="filter-select">
+                                            <option value="">All Roles</option>
+                                            <option value="admin">Administrator</option>
+                                            <option value="clubHead">Club Head</option>
+                                            <option value="student">Student</option>
+                                        </select>
+                                        <select x-model="userBranchFilter" class="filter-select">
+                                            <option value="">All Branches</option>
+                                            <template x-for="branch in branches" :key="branch.id">
+                                                <option :value="branch.code" x-text="branch.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="users-stats">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h4 x-text="filteredUsers.length"></h4>
+                                        <p>Total Users</p>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-user-shield"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h4 x-text="getUsersByRole('admin').length"></h4>
+                                        <p>Administrators</p>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-user-tie"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h4 x-text="getUsersByRole('clubHead').length"></h4>
+                                        <p>Club Heads</p>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-user-graduate"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h4 x-text="getUsersByRole('student').length"></h4>
+                                        <p>Students</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bulk-actions" x-show="selectedUsers.length > 0">
+                                <div class="bulk-info">
+                                    <span x-text="selectedUsers.length + ' users selected'"></span>
+                                </div>
+                                <div class="bulk-buttons">
+                                    <button class="btn-secondary" @click="bulkDeleteUsers()">
+                                        <i class="fas fa-trash"></i> Delete Selected
+                                    </button>
+                                    <button class="btn-secondary" @click="bulkResetPasswords()">
+                                        <i class="fas fa-key"></i> Reset Passwords
+                                    </button>
+                                    <button class="btn-secondary" @click="clearSelection()">
+                                        <i class="fas fa-times"></i> Clear Selection
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="users-grid">
+                                <template x-for="user in filteredUsers" :key="user.username">
+                                    <div class="user-card" :class="{ 'selected': selectedUsers.includes(user.username) }">
+                                        <div class="user-checkbox">
+                                            <input type="checkbox" :id="'user-' + user.username" 
+                                                   :value="user.username" 
+                                                   x-model="selectedUsers"
+                                                   x-show="user.username !== 'admin'">
+                                            <label :for="'user-' + user.username"></label>
+                                        </div>
+                                        <div class="user-info">
+                                            <h4 x-text="user.username"></h4>
+                                            <p x-text="user.role === 'admin' ? 'Administrator' : (user.role === 'clubHead' ? ('Club Head - ' + getClubName(user.club)) : 'Student')"></p>
+                                            <p x-text="user.branch ? 'Branch: ' + user.branch : ''"></p>
+                                            <p x-text="user.email ? 'Email: ' + user.email : ''"></p>
+                                        </div>
+                                        <div class="user-actions">
+                                            <button class="btn-primary" @click="editUser(user)" title="Edit User">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn-secondary" @click="resetUserPassword(user)" title="Reset Password">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                            <button class="btn-danger" @click="deleteUser(user)" x-show="user.username !== 'admin'" title="Delete User">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Branches Tab -->
+                        <div class="tab-content" x-show="userManagementTab === 'branches'">
+                            <h3>Manage Branches</h3>
+                            <div class="branches-section">
+                                <div class="existing-branches">
+                                    <h4>Existing Branches</h4>
+                                    <div class="branches-grid">
+                                        <template x-for="branch in branches" :key="branch.id">
+                                            <div class="branch-card">
+                                                <h5 x-text="branch.name"></h5>
+                                                <p x-text="branch.description"></p>
+                                                <div class="branch-actions">
+                                                    <button class="btn-secondary" @click="editBranch(branch)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn-danger" @click="deleteBranch(branch)">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                
+                                <div class="add-branch">
+                                    <h4>Add New Branch</h4>
+                                    <form @submit.prevent="addBranch" class="branch-form">
+                                        <div class="form-group">
+                                            <label for="branchName">Branch Name</label>
+                                            <input type="text" id="branchName" x-model="newBranch.name" required placeholder="e.g., Information Technology">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="branchCode">Branch Code</label>
+                                            <input type="text" id="branchCode" x-model="newBranch.code" required placeholder="e.g., IT">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="branchDescription">Description</label>
+                                            <textarea id="branchDescription" x-model="newBranch.description" placeholder="Branch description..."></textarea>
+                                        </div>
+                                        <button type="submit" class="btn-primary">
+                                            <i class="fas fa-plus"></i> Add Branch
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Create User Tab -->
+                        <div class="tab-content" x-show="userManagementTab === 'create'">
+                            <h3>Create New User</h3>
+                            <form @submit.prevent="createUser" class="user-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newUsername">Username</label>
+                                        <input type="text" id="newUsername" x-model="newUser.username" required placeholder="Enter username">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newPassword">Password</label>
+                                        <input type="password" id="newPassword" x-model="newUser.password" required placeholder="Enter password">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newRole">Role</label>
+                                        <select id="newRole" x-model="newUser.role" required @change="updateRoleOptions()">
+                                            <option value="">Select Role</option>
+                                            <option value="admin">Administrator</option>
+                                            <option value="clubHead">Club Head</option>
+                                            <option value="student">Student</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" x-show="newUser.role === 'clubHead'">
+                                        <label for="newClub">Club</label>
+                                        <select id="newClub" x-model="newUser.club">
+                                            <option value="">Select Club</option>
+                                            <option value="astronomy">🔭 Astronomy Club</option>
+                                            <option value="sports">⚽ Sports Club</option>
+                                            <option value="gdg">💻 GDG Club</option>
+                                            <option value="music">🎵 Music Club</option>
+                                            <option value="drama">🎭 Drama Club</option>
+                                            <option value="IEEE">🦴 IEEE Club</option>
+                                            <option value="ACM">💻 ACM Club</option>
+                                            <option value="ITSA">👌 ITSA Club</option>
+                                            <option value="CESA">👎 CESA Club</option>
+                                            <option value="IIC">💡 IIC Club</option>
+                                            <option value="cybersec">💻 Cybersec Club</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newBranch">Branch</label>
+                                        <select id="newBranch" x-model="newUser.branch" required>
+                                            <option value="">Select Branch</option>
+                                            <template x-for="branch in branches" :key="branch.id">
+                                                <option :value="branch.code" x-text="branch.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newEmail">Email</label>
+                                        <input type="email" id="newEmail" x-model="newUser.email" placeholder="user@i2it.ac.in">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="button" @click="resetUserForm()" class="btn-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                    <button type="submit" class="btn-primary">
+                                        <i class="fas fa-user-plus"></i> Create User
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -828,6 +1047,9 @@
 
     <!-- Floating Action Button -->
     <div class="fab-container" x-show="currentUser">
+        <div class="fab-logo">
+            <img src="logo.png" alt="I²IT Logo" class="college-logo fab-logo-img">
+        </div>
         <button class="fab-main" @click="fabOpen = !fabOpen">
             <i class="fas fa-plus" x-show="!fabOpen"></i>
             <i class="fas fa-times" x-show="fabOpen"></i>
@@ -838,34 +1060,111 @@
                 <i class="fas fa-calendar-plus"></i>
             </button>
             <button class="fab-option" @click="currentPage = 'calendar'; fabOpen = false" title="View Calendar">
-                <i class="fas fa-calendar-alt"></i>
             </button>
             <button class="fab-option" @click="exportEvents(); fabOpen = false" title="Export Events">
                 <i class="fas fa-download"></i>
-            </button>
-            <button class="fab-option" @click="currentPage = 'analytics'; fabOpen = false" title="Analytics">
-                <i class="fas fa-chart-bar"></i>
             </button>
         </div>
     </div>
 
     <!-- Quick Access Toolbar -->
     <div class="quick-toolbar" x-show="currentUser">
+        <div class="toolbar-logo">
+            <img src="logo.png" alt="I²IT Logo" class="college-logo toolbar-logo">
+        </div>
         <div class="toolbar-item" @click="currentPage = 'dashboard'" :class="{ active: currentPage === 'dashboard' }">
             <i class="fas fa-home"></i>
             <span>Home</span>
         </div>
         <div class="toolbar-item" @click="currentPage = 'calendar'" :class="{ active: currentPage === 'calendar' }">
-            <i class="fas fa-calendar"></i>
             <span>Calendar</span>
         </div>
         <div class="toolbar-item" @click="currentPage = 'events'" :class="{ active: currentPage === 'events' }" x-show="canCreateEvent()">
             <i class="fas fa-plus"></i>
             <span>Add</span>
         </div>
-        <div class="toolbar-item" @click="currentPage = 'analytics'" :class="{ active: currentPage === 'analytics' }">
-            <i class="fas fa-chart-line"></i>
-            <span>Stats</span>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal" x-show="showEditUserModal" @click.away="showEditUserModal = false">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="modal-logo-container">
+                        <img src="logo.png" alt="I²IT Logo" class="college-logo-modal">
+                    </div>
+                    <h3>Edit User</h3>
+                </div>
+                <button @click="showEditUserModal = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form @submit.prevent="updateUser" class="user-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editUsername">Username</label>
+                            <input type="text" id="editUsername" x-model="editingUser.username" required readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPassword">New Password (leave blank to keep current)</label>
+                            <input type="password" id="editPassword" x-model="editingUser.password" placeholder="Enter new password">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editRole">Role</label>
+                            <select id="editRole" x-model="editingUser.role" required>
+                                <option value="admin">Administrator</option>
+                                <option value="clubHead">Club Head</option>
+                                <option value="student">Student</option>
+                            </select>
+                        </div>
+                        <div class="form-group" x-show="editingUser.role === 'clubHead'">
+                            <label for="editClub">Club</label>
+                            <select id="editClub" x-model="editingUser.club">
+                                <option value="">Select Club</option>
+                                <option value="astronomy">🔭 Astronomy Club</option>
+                                <option value="sports">⚽ Sports Club</option>
+                                <option value="gdg">💻 GDG Club</option>
+                                <option value="music">🎵 Music Club</option>
+                                <option value="drama">🎭 Drama Club</option>
+                                <option value="IEEE">🦴 IEEE Club</option>
+                                <option value="ACM">💻 ACM Club</option>
+                                <option value="ITSA">👌 ITSA Club</option>
+                                <option value="CESA">👎 CESA Club</option>
+                                <option value="IIC">💡 IIC Club</option>
+                                <option value="cybersec">💻 Cybersec Club</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editBranch">Branch</label>
+                            <select id="editBranch" x-model="editingUser.branch" required>
+                                <option value="">Select Branch</option>
+                                <template x-for="branch in branches" :key="branch.id">
+                                    <option :value="branch.code" x-text="branch.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEmail">Email</label>
+                            <input type="email" id="editEmail" x-model="editingUser.email" placeholder="user@i2it.ac.in">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button @click="showEditUserModal = false" class="btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button @click="updateUser()" class="btn-primary">
+                    <i class="fas fa-save"></i> Update User
+                </button>
+            </div>
         </div>
     </div>
 
@@ -873,6 +1172,7 @@
     <div class="alert-container">
         <div class="alert" x-show="showAlert" x-transition>
             <div class="alert-content">
+                <img src="logo.png" alt="I²IT Logo" class="college-logo alert-logo">
                 <i class="fas fa-check-circle"></i>
                 <span x-text="alertMessage"></span>
             </div>
