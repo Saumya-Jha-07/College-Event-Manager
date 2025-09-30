@@ -53,6 +53,7 @@
             </a>
             <a href="#" @click.prevent="currentPage = 'calendar'; sidebarOpen = false" 
                :class="{ active: currentPage === 'calendar' }">
+                <i class="fas fa-calendar"></i>
                 <span>Calendar</span>
             </a>
             <a href="#" @click.prevent="currentPage = 'events'; sidebarOpen = false" 
@@ -290,6 +291,7 @@
                                 <span>Add New Event</span>
                             </button>
                             <button class="action-btn" @click="currentPage = 'calendar'">
+                                <i class="fas fa-calendar"></i>
                                 <span>View Calendar</span>
                             </button>
                             <button class="action-btn" @click="exportEvents()">
@@ -1060,6 +1062,7 @@
                 <i class="fas fa-calendar-plus"></i>
             </button>
             <button class="fab-option" @click="currentPage = 'calendar'; fabOpen = false" title="View Calendar">
+                <i class="fas fa-calendar"></i>
             </button>
             <button class="fab-option" @click="exportEvents(); fabOpen = false" title="Export Events">
                 <i class="fas fa-download"></i>
@@ -1077,6 +1080,7 @@
             <span>Home</span>
         </div>
         <div class="toolbar-item" @click="currentPage = 'calendar'" :class="{ active: currentPage === 'calendar' }">
+            <i class="fas fa-calendar"></i>
             <span>Calendar</span>
         </div>
         <div class="toolbar-item" @click="currentPage = 'events'" :class="{ active: currentPage === 'events' }" x-show="canCreateEvent()">
