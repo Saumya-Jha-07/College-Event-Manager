@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I²IT College Event Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="app()">
+    <!-- Loading Screen -->
+    <div class="loading-screen" x-show="isLoading" x-transition>
+        <div class="loader">
+            <div class="loader-circle"></div>
+            <h3>I²IT Event Club Manager</h3>
+            <p>Loading your events...</p>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" :class="{ 'sidebar-open': sidebarOpen }" x-show="currentUser">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="logo.png" alt="I²IT Logo" class="college-logo">
+                <i class="fas fa-calendar-alt"></i>
+                <span>- I²IT Events</span>
+            </div>
+            <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="user-profile" x-show="currentUser" x-transition>
+            <div class="profile-image">
+                <img src="./My_Cover_Photo.jpg" alt="Profile Photo">
+                <div class="status-indicator online"></div>
+            </div>
+            <div class="profile-info">
+                <h4 x-text="currentUser?.username"></h4>
+                <span x-text="currentUser?.role === 'admin' ? 'Administrator' : (currentUser?.role === 'clubHead' ? ('Club Head - ' + getClubName(currentUser?.club)) : 'Student')"></span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" @click.prevent="currentPage = 'dashboard'; sidebarOpen = false" 
+               :class="{ active: currentPage === 'dashboard' }">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" @click.prevent="currentPage = 'calendar'; sidebarOpen = false" 
+               :class="{ active: currentPage === 'calendar' }">
+                <i class="fas fa-calendar"></i>
+                <span>Calendar</span>
+            </a>
+            <a href="#" @click.prevent="currentPage = 'events'; sidebarOpen = false" 
+               x-show="canCreateEvent()"
+               :class="{ active: currentPage === 'events' }">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add Event</span>
+            </a>
+            <a href="#" @click.prevent="currentPage = 'analytics'; sidebarOpen = false" 
+               :class="{ active: currentPage === 'analytics' }">
+                <i class="fas fa-chart-bar"></i>
+                <span>Analytics</span>
+            </a>
+            <a href="#" @click.prevent="currentPage = 'about'; sidebarOpen = false" 
+               :class="{ active: currentPage === 'about' }">
+                <i class="fas fa-info-circle"></i>
+                <span>About</span>
+            </a>
+            <a href="#" @click.prevent="currentPage = 'contact'; sidebarOpen = false" 
+               :class="{ active: currentPage === 'contact' }">
+                <i class="fas fa-envelope"></i>
+                <span>Contact</span>
+            </a>
+            <a href="#" @click.prevent="currentPage = 'requests'; sidebarOpen = false" x-show="canManageRequests()" :class="{ active: currentPage === 'requests' }">
+                <i class="fas fa-user-check"></i>
+                <span>Requests</span>
+            </a>
+            <a href="#" @click.prevent="currentPage = 'login'; sidebarOpen = false" x-show="!currentUser" :class="{ active: currentPage === 'login' }">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Login</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="quick-stats">
+                <div class="stat-item">
+                    <span class="stat-number" x-text="events.length"></span>
+                    <span class="stat-label">Total Events</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" x-text="getUpcomingEvents().length"></span>
+                    <span class="stat-label">Upcoming</span>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; display:flex; gap:.5rem;" x-show="currentUser">
+                <button class="btn-secondary" @click="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" :class="{ 'sidebar-open': sidebarOpen }">
+        <!-- Top Header -->
+        <header class="top-header" x-show="currentUser">
+            <div class="header-left">
+                <button class="menu-toggle" @click="sidebarOpen = !sidebarOpen">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="breadcrumb">
+                    <span x-text="getPageTitle()"></span>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search events..." x-model="searchQuery">
+                </div>
+                
+                <div class="header-actions">
+                    <button class="notification-btn" @click="showNotifications = !showNotifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" x-show="getUpcomingEvents().length > 0" x-text="getUpcomingEvents().length"></span>
+                    </button>
+                    
+                    <div class="club-selector">
+                        <select x-model="selectedClub" @change="filterEvents()" :disabled="isClubHead()">
+                            <option value="all">All Clubs</option>
+                            <option value="astronomy">🔭 Astronomy Club</option>
+                            <option value="sports">⚽ Sports Club</option>
+                            <option value="gdg">💻 GDG Club</option>
+                            <option value="music">🎵 Music Club</option>
+                            <option value="drama">🎭 Drama Club</option>
+                            <option value="IEEE">🦴 IEEE Club</option>
+                            <option value="ACM">💻 ACM Club</option>
+                            <option value="ITSA">👌 ITSA Club</option>
+                            <option value="CESA">👎 CESA Club</option>
+                            <option value="IIC">💡 IIC Club</option>
+                            <option value="cybersec">💻 Cybersec Club</option>
+                            
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Notifications Dropdown -->
+        <div class="notifications-dropdown" x-show="showNotifications && currentUser" @click.away="showNotifications = false">
+            <div class="notifications-header">
+                <h4>Notifications</h4>
+                <button @click="markAllAsRead()">Mark all read</button>
+            </div>
+            <div class="notifications-list">
+                <template x-for="event in getUpcomingEvents().slice(0, 5)">
+                    <div class="notification-item">
+                        <div class="notification-icon">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                        <div class="notification-content">
+                            <p x-text="event.name"></p>
+                            <span x-text="formatEventTime(event.date, event.time)"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="content-area">
+            <!-- Login Page -->
+            <div class="page" x-show="currentPage === 'login'">
+                <div class="event-form-container">
+                    <div class="form-header">
+                        <h2>Login</h2>
+                        <p>Sign in to access I²IT Events</p>
+                    </div>
+                    <form class="event-form" @submit.prevent="login">
+                        <div class="form-group">
+                            <label for="loginUsername"><i class="fas fa-user"></i> Username</label>
+                            <input id="loginUsername" type="text" x-model="loginForm.username" placeholder="e.g. admin, student, head_gdg" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword"><i class="fas fa-lock"></i> Password</label>
+                            <input id="loginPassword" type="password" x-model="loginForm.password" placeholder="Your password" required>
+                        </div>
+                        <div class="form-actions center">
+                            <button type="submit" class="btn-primary"><i class="fas fa-sign-in-alt"></i> Login</button>
+                        </div>
+                        <p class="auth-error" x-text="loginError" x-show="loginError"></p>
+                        
+                    </form>
+                </div>
+            </div>
+            <!-- Dashboard Page -->
+            <div class="page" x-show="currentPage === 'dashboard'">
+                <div class="dashboard-header">
+                    <h1>Welcome back, Saumya!</h1>
+                    <p>Here's what's happening at I²IT today</p>
+                </div>
+
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 x-text="getTodayEvents().length"></h3>
+                            <p>Today's Events</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 x-text="getUpcomingEvents().length"></h3>
+                            <p>Upcoming Events</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>5</h3>
+                            <p>Active Clubs</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 x-text="getCompletedEvents().length"></h3>
+                            <p>Completed Events</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-content">
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h2>Today's Events</h2>
+                            <a href="#" @click.prevent="currentPage = 'calendar'">View All</a>
+                        </div>
+                        <div class="events-grid">
+                            <template x-for="event in getTodayEvents()">
+                                <div class="event-card" :class="event.club">
+                                    <div class="event-header">
+                                        <div class="event-time">
+                                            <i class="fas fa-clock"></i>
+                                            <span x-text="event.time"></span>
+                                        </div>
+                                        <div class="event-club-badge" x-text="getClubName(event.club)"></div>
+                                    </div>
+                                    <h3 x-text="event.name"></h3>
+                                    <p x-text="event.description"></p>
+                                    <div class="event-actions">
+                                        <button @click="showEventDetails(event)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="editEvent(event)" x-show="isAdmin() || (isClubHead() && event.club === currentUser?.club)">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h2>Quick Actions</h2>
+                        </div>
+                        <div class="quick-actions">
+                            <button class="action-btn" @click="currentPage = 'events'" x-show="canCreateEvent()">
+                                <i class="fas fa-plus"></i>
+                                <span>Add New Event</span>
+                            </button>
+                            <button class="action-btn" @click="currentPage = 'calendar'">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>View Calendar</span>
+                            </button>
+                            <button class="action-btn" @click="exportEvents()">
+                                <i class="fas fa-download"></i>
+                                <span>Export Events</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Page -->
+            <div class="page" x-show="currentPage === 'calendar'">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button @click="previousMonth()" class="nav-btn">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <h2 x-text="currentMonth + ' ' + currentYear"></h2>
+                            <button @click="nextMonth()" class="nav-btn">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div class="calendar-actions">
+                            <button @click="currentDate = new Date()" class="today-btn">
+                                Today
+                            </button>
+                            <div class="view-toggle">
+                                <button :class="{ active: calendarView === 'month' }" @click="calendarView = 'month'">Month</button>
+                                <button :class="{ active: calendarView === 'week' }" @click="calendarView = 'week'">Week</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="calendar-grid" x-show="calendarView === 'month'">
+                        <div class="calendar-weekdays">
+                            <div class="weekday" x-text="day" x-for="day in weekdays"></div>
+                        </div>
+                        <div class="calendar-days">
+                            <template x-for="day in calendarDays">
+                                <div class="calendar-day" 
+                                     :class="{ 
+                                         'has-event': hasEvent(day),
+                                         'today': isToday(day),
+                                         'other-month': !day
+                                     }"
+                                     @click="showDayEvents(day)">
+                                    <div class="day-number" x-text="day"></div>
+                                    <div class="day-events">
+                                        <template x-for="event in getEventsForDate(dateToLocalYMD(new Date(currentYear, currentDate.getMonth(), day)))">
+                                            <div class="event-dot" :class="event.club" :title="event.name"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Event Page -->
+            <div class="page" x-show="currentPage === 'events' && canCreateEvent()">
+                <div class="event-form-container">
+                    <div class="form-header">
+                        <h2>Add New Event</h2>
+                        <p>Create a new event for I²IT College</p>
+                    </div>
+                    
+                    <form @submit.prevent="addEvent" class="event-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="eventName">
+                                    <i class="fas fa-tag"></i>
+                                    Event Name
+                                </label>
+                                <input type="text" id="eventName" x-model="newEvent.name" required 
+                                       placeholder="Enter event name">
+                            </div>
+                            <div class="form-group">
+                                <label for="eventClub">
+                                    <i class="fas fa-users"></i>
+                                    Club
+                                </label>
+                                <select id="eventClub" x-model="newEvent.club" :disabled="isClubHead()" required>
+                                    <option value="">Select Club</option>
+                                    <option value="astronomy">🔭 Astronomy Club</option>
+                                    <option value="sports">⚽ Sports Club</option>
+                                    <option value="gdg">💻 GDG Club</option>
+                                    <option value="music">🎵 Music Club</option>
+                                    <option value="drama">🎭 Drama Club</option>
+                                    <option value="IEEE">🦴 IEEE Club</option>
+                            <option value="ACM">💻 ACM Club</option>
+                            <option value="ITSA">👌 ITSA Club</option>
+                            <option value="CESA">👎 CESA Club</option>
+                            <option value="IIC">💡 IIC Club</option>
+                            <option value="cybersec">💻 Cybersec Club</option>
+                                </select>
+                                <div x-show="isClubHead()" style="color:#64748b; font-size:.85rem; margin-top:.25rem;">Club locked to <strong x-text="getClubName(currentUser?.club)"></strong></div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="eventDate">
+                                    <i class="fas fa-calendar"></i>
+                                    Date
+                                </label>
+                                <input type="date" id="eventDate" x-model="newEvent.date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="eventTime">
+                                    <i class="fas fa-clock"></i>
+                                    Time
+                                </label>
+                                <input type="time" id="eventTime" x-model="newEvent.time" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventDescription">
+                                <i class="fas fa-align-left"></i>
+                                Description
+                            </label>
+                            <textarea id="eventDescription" x-model="newEvent.description" 
+                                      placeholder="Describe your event..." rows="4"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventLocation">
+                                <i class="fas fa-map-marker-alt"></i>
+                                Location
+                            </label>
+                            <input type="text" id="eventLocation" x-model="newEvent.location" 
+                                   placeholder="Event location">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" @click="resetEventForm()" class="btn-secondary">
+                                <i class="fas fa-times"></i>
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i>
+                                Create Event
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Requests Management Page -->
+            <div class="page" x-show="currentPage === 'requests'">
+                <div class="event-form-container">
+                    <div class="form-header">
+                        <h2>Join Requests</h2>
+                        <p>Approve or deny student club join requests</p>
+                    </div>
+                    <div class="event-form">
+                        <template x-if="canManageRequests()">
+                          <div>
+                            <h3 style="margin-bottom: .75rem;">Pending Requests</h3>
+                            <div class="events-grid">
+                              <template x-for="req in getPendingRequests()" :key="req.id">
+                                <div class="event-card">
+                                  <h3 x-text="req.name"></h3>
+                                  <p><strong>Username:</strong> <span x-text="req.username"></span></p>
+                                  <p><strong>Email:</strong> <span x-text="req.email"></span></p>
+                                  <p><strong>Club:</strong> <span x-text="getClubName(req.club)"></span></p>
+                                  <div class="event-actions">
+                                    <button class="btn-primary" @click="approveRequest(req)"><i class="fas fa-check"></i> Approve</button>
+                                    <button class="btn-danger" @click="denyRequest(req)"><i class="fas fa-times"></i> Deny</button>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>
+                            <h3 style="margin: 1.25rem 0 .75rem;">All Requests</h3>
+                            <div class="events-grid">
+                              <template x-for="req in getAllRequests()" :key="req.id">
+                                <div class="event-card">
+                                  <h3 x-text="req.name + ' (' + req.username + ')' "></h3>
+                                  <p><strong>Club:</strong> <span x-text="getClubName(req.club)"></span></p>
+                                  <p><strong>Status:</strong> <span x-text="req.status"></span></p>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+                        </template>
+                        <template x-if="isStudent()">
+                          <div style="margin-top: 1rem;">
+                            <h3 style="margin-bottom: .75rem;">Request to Join a Club</h3>
+                            <div class="form-row">
+                              <div class="form-group">
+                                <label><i class="fas fa-user"></i> Name</label>
+                                <input type="text" x-model="joinRequestForm.name" placeholder="Your full name">
+                              </div>
+                              <div class="form-group">
+                                <label><i class="fas fa-envelope"></i> Email</label>
+                                <input type="email" x-model="joinRequestForm.email" placeholder="your@email.com">
+                              </div>
+                            </div>
+                            <div class="form-group">
+                              <label><i class="fas fa-users"></i> Club</label>
+                              <select x-model="joinRequestForm.club">
+                                <option value="">Select Club</option>
+                                <option value="astronomy">🔭 Astronomy Club</option>
+                                <option value="sports">⚽ Sports Club</option>
+                                <option value="gdg">💻 GDG Club</option>
+                                <option value="music">🎵 Music Club</option>
+                                <option value="drama">🎭 Drama Club</option>
+                              </select>
+                            </div>
+                            <div class="form-actions">
+                              <button class="btn-primary" @click="submitJoinRequest()"><i class="fas fa-paper-plane"></i> Submit Request</button>
+                            </div>
+                          </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Page -->
+            <div class="page" x-show="currentPage === 'analytics'">
+                <div class="analytics-header">
+                    <h2>Event Analytics</h2>
+                    <p>Insights into I²IT College events</p>
+                </div>
+
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>Events by Club</h3>
+                        <div class="chart-container">
+                            <div class="chart-bar" style="height: 60%; background: var(--astronomy-color);">
+                                <span>Astronomy</span>
+                            </div>
+                            <div class="chart-bar" style="height: 80%; background: var(--sports-color);">
+                                <span>Sports</span>
+                            </div>
+                            <div class="chart-bar" style="height: 70%; background: var(--gdg-color);">
+                                <span>GDG</span>
+                            </div>
+                            <div class="chart-bar" style="height: 50%; background: var(--music-color);">
+                                <span>Music</span>
+                            </div>
+                            <div class="chart-bar" style="height: 40%; background: var(--drama-color);">
+                                <span>Drama</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analytics-card">
+                        <h3>Monthly Overview</h3>
+                        <div class="monthly-stats">
+                            <div class="stat-item">
+                                <span class="stat-number" x-text="getThisMonthEvents().length"></span>
+                                <span class="stat-label">This Month</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" x-text="getNextMonthEvents().length"></span>
+                                <span class="stat-label">Next Month</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Page -->
+            <div class="page" x-show="currentPage === 'about'">
+                <div class="about-container">
+                    <div class="about-header">
+                        <h2>About I²IT College Event Manager</h2>
+                        <p>Empowering student life through organized events</p>
+                    </div>
+                    
+                    <div class="about-content">
+                        <div class="about-section">
+                            <h3><i class="fas fa-bullseye"></i> Our Mission</h3>
+                            <p>To provide a comprehensive platform for managing and organizing college events, fostering student engagement and community building at I2IT College.</p>
+                        </div>
+                        
+                        <div class="about-section">
+                            <h3><i class="fas fa-star"></i> Key Features</h3>
+                            <ul>
+                                <li>Intuitive event creation and management</li>
+                                <li>Interactive calendar with real-time updates</li>
+                                <li>Smart notifications for upcoming events</li>
+                                <li>Multi-club support with unique branding</li>
+                                <li>Responsive design for all devices</li>
+                                <li>Data analytics and insights</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="about-section">
+                            <h3><i class="fas fa-users"></i> Supported Clubs</h3>
+                            <div class="clubs-showcase">
+                                <div class="club-item">
+                                    <span class="club-icon">🔭</span>
+                                    <span>Astronomy Club</span>
+                                </div>
+                                <div class="club-item">
+                                    <span class="club-icon">⚽</span>
+                                    <span>Sports Club</span>
+                                </div>
+                                <div class="club-item">
+                                    <span class="club-icon">💻</span>
+                                    <span>GDG Club</span>
+                                </div>
+                                <div class="club-item">
+                                    <span class="club-icon">🎵</span>
+                                    <span>Music Club</span>
+                                </div>
+                                <div class="club-item">
+                                    <span class="club-icon">🎭</span>
+                                    <span>Drama Club</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Page -->
+            <div class="page" x-show="currentPage === 'contact'">
+                <div class="contact-container">
+                    <div class="contact-header">
+                        <h2>Contact Us</h2>
+                        <p>Get in touch with the I²ITs Event Management Team</p>
+                    </div>
+                    
+                    <div class="contact-content">
+                        <div class="contact-info">
+                            <div class="contact-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <div>
+                                    <h4>Address</h4>
+                                    <p>I²IT College, Pune, Maharashtra</p>
+                                </div>
+                            </div>
+                            <div class="contact-item">
+                                <i class="fas fa-phone"></i>
+                                <div>
+                                    <h4>Phone</h4>
+                                    <p>+91 123 456 7890</p>
+                                </div>
+                            </div>
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <div>
+                                    <h4>Email</h4>
+                                    <p>events@i2it.ac.in</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <form @submit.prevent="submitContact" class="contact-form">
+                            <div class="form-group">
+                                <label for="contactName">Name</label>
+                                <input type="text" id="contactName" x-model="contactForm.name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="contactEmail">Email</label>
+                                <input type="email" id="contactEmail" x-model="contactForm.email" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="contactSubject">Subject</label>
+                                <input type="text" id="contactSubject" x-model="contactForm.subject" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="contactMessage">Message</label>
+                                <textarea id="contactMessage" x-model="contactForm.message" required rows="5"></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div class="modal" x-show="showEventModal && currentUser" @click.away="showEventModal = false">
+        <div class="modal-content event-details-modal">
+            <div class="modal-header">
+                <h3 x-text="selectedEvent?.name"></h3>
+                <button @click="showEventModal = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" x-show="selectedEvent">
+                <div class="event-details">
+                    <div class="detail-item">
+                        <i class="fas fa-calendar"></i>
+                        <span x-text="formatDate(selectedEvent?.date)"></span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-clock"></i>
+                        <span x-text="selectedEvent?.time"></span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-users"></i>
+                        <span x-text="getClubName(selectedEvent?.club)"></span>
+                    </div>
+                    <div class="detail-item" x-show="selectedEvent?.location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span x-text="selectedEvent?.location"></span>
+                    </div>
+                </div>
+                <div class="event-description">
+                    <h4>Description</h4>
+                    <p x-text="selectedEvent?.description"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button @click="editEvent(selectedEvent)" class="btn-secondary" x-show="isAdmin() || (isClubHead() && selectedEvent?.club === currentUser?.club)">
+                    <i class="fas fa-edit"></i>
+                    Edit Event
+                </button>
+                <button @click="deleteEvent(selectedEvent)" class="btn-danger" x-show="isAdmin() || (isClubHead() && selectedEvent?.club === currentUser?.club)">
+                    <i class="fas fa-trash"></i>
+                    Delete Event
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Events Modal -->
+    <div class="modal" x-show="showDayEventsModal && currentUser" @click.away="showDayEventsModal = false">
+        <div class="modal-content event-details-modal">
+            <div class="modal-header">
+                <h3 x-text="formatDate(selectedDate) + ' — ' + selectedDayEvents.length + ' events'"></h3>
+                <button @click="showDayEventsModal = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="events-grid">
+                    <template x-for="ev in selectedDayEvents" :key="ev.id">
+                        <div class="event-card" :class="ev.club">
+                            <div class="event-header">
+                                <div class="event-time">
+                                    <i class="fas fa-clock"></i>
+                                    <span x-text="ev.time"></span>
+                                </div>
+                                <div class="event-club-badge" x-text="getClubName(ev.club)"></div>
+                            </div>
+                            <h3 x-text="ev.name"></h3>
+                            <p x-text="ev.description"></p>
+                            <div class="event-actions">
+                                <button @click="showEventDetails(ev)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button @click="editEvent(ev)" x-show="isAdmin() || (isClubHead() && ev.club === currentUser?.club)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <div class="fab-container" x-show="currentUser">
+        <button class="fab-main" @click="fabOpen = !fabOpen">
+            <i class="fas fa-plus" x-show="!fabOpen"></i>
+            <i class="fas fa-times" x-show="fabOpen"></i>
+        </button>
+        
+        <div class="fab-options" x-show="fabOpen" x-transition>
+            <button class="fab-option" @click="currentPage = 'events'; fabOpen = false" title="Add Event" x-show="canCreateEvent()">
+                <i class="fas fa-calendar-plus"></i>
+            </button>
+            <button class="fab-option" @click="currentPage = 'calendar'; fabOpen = false" title="View Calendar">
+                <i class="fas fa-calendar-alt"></i>
+            </button>
+            <button class="fab-option" @click="exportEvents(); fabOpen = false" title="Export Events">
+                <i class="fas fa-download"></i>
+            </button>
+            <button class="fab-option" @click="currentPage = 'analytics'; fabOpen = false" title="Analytics">
+                <i class="fas fa-chart-bar"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Access Toolbar -->
+    <div class="quick-toolbar" x-show="currentUser">
+        <div class="toolbar-item" @click="currentPage = 'dashboard'" :class="{ active: currentPage === 'dashboard' }">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </div>
+        <div class="toolbar-item" @click="currentPage = 'calendar'" :class="{ active: currentPage === 'calendar' }">
+            <i class="fas fa-calendar"></i>
+            <span>Calendar</span>
+        </div>
+        <div class="toolbar-item" @click="currentPage = 'events'" :class="{ active: currentPage === 'events' }" x-show="canCreateEvent()">
+            <i class="fas fa-plus"></i>
+            <span>Add</span>
+        </div>
+        <div class="toolbar-item" @click="currentPage = 'analytics'" :class="{ active: currentPage === 'analytics' }">
+            <i class="fas fa-chart-line"></i>
+            <span>Stats</span>
+        </div>
+    </div>
+
+    <!-- Alert Notifications -->
+    <div class="alert-container">
+        <div class="alert" x-show="showAlert" x-transition>
+            <div class="alert-content">
+                <i class="fas fa-check-circle"></i>
+                <span x-text="alertMessage"></span>
+            </div>
+            <button @click="showAlert = false" class="alert-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html> 
