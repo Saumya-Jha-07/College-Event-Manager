@@ -294,52 +294,85 @@
                 </div>
             </div>
 
-            <!-- Calendar Page -->
+            <!-- Daily Events Page -->
             <div class="page" x-show="currentPage === 'calendar'">
                 <div class="calendar-container">
                     <div class="calendar-header">
                         <div class="calendar-nav">
-                            <button @click="previousMonth()" class="nav-btn">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <h2 x-text="currentMonth + ' ' + currentYear"></h2>
-                            <button @click="nextMonth()" class="nav-btn">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
+                            <h2 x-text="showAllEvents ? 'All Events' : 'Daily Events'"></h2>
                         </div>
-                        <div class="calendar-actions">
-                            <button @click="currentDate = new Date()" class="today-btn">
-                                Today
-                            </button>
-                            <div class="view-toggle">
-                                <button :class="{ active: calendarView === 'month' }" @click="calendarView = 'month'">Month</button>
-                                <button :class="{ active: calendarView === 'week' }" @click="calendarView = 'week'">Week</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="calendar-grid" x-show="calendarView === 'month'">
-                        <div class="calendar-weekdays">
-                            <div class="weekday" x-text="day" x-for="day in weekdays"></div>
-                        </div>
-                        <div class="calendar-days">
-                            <template x-for="day in calendarDays">
-                                <div class="calendar-day" 
-                                     :class="{ 
-                                         'has-event': hasEvent(day),
-                                         'today': isToday(day),
-                                         'other-month': !day
-                                     }"
-                                     @click="showDayEvents(day)">
-                                    <div class="day-number" x-text="day"></div>
-                                    <div class="day-events">
-                                        <template x-for="event in getEventsForDate(dateToLocalYMD(new Date(currentYear, currentDate.getMonth(), day)))">
-                                            <div class="event-dot" :class="event.club" :title="event.name"></div>
-                                        </template>
-                                    </div>
+                        <div class="calendar-actions" style="gap:.75rem; align-items:center;">
+                            <label style="display:flex; align-items:center; gap:.5rem; font-size:.9rem; color:var(--text-secondary);">
+                                <input type="checkbox" x-model="showAllEvents"> Show all
+                            </label>
+                            <template x-if="!showAllEvents">
+                                <div style="display:flex; gap:.75rem; align-items:center;">
+                                    <input type="date" x-model="selectedDate" style="padding:.5rem; border:1px solid var(--border-color); border-radius:8px;">
+                                    <button @click="selectedDate = dateToLocalYMD(new Date())" class="today-btn">Today</button>
+                                    <div style="font-weight:600; color: var(--text-secondary);">Count: <span x-text="selectedDayCount"></span></div>
                                 </div>
                             </template>
                         </div>
+                    </div>
+
+                    <div class="events-grid" x-show="!showAllEvents">
+                        <template x-if="selectedDayEvents.length === 0">
+                            <div class="event-card">
+                                <h3>No events for this date</h3>
+                                <p>Pick another date or add a new event.</p>
+                            </div>
+                        </template>
+                        <template x-for="event in selectedDayEvents" :key="event.id">
+                            <div class="event-card" :class="event.club">
+                                <div class="event-header">
+                                    <div class="event-time">
+                                        <i class="fas fa-clock"></i>
+                                        <span x-text="event.time"></span>
+                                    </div>
+                                    <div class="event-club-badge" x-text="getClubName(event.club)"></div>
+                                </div>
+                                <h3 x-text="event.name"></h3>
+                                <p x-text="event.description"></p>
+                                <div class="event-actions">
+                                    <button @click="showEventDetails(event)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button @click="editEvent(event)" x-show="isAdmin() || (isClubHead() && event.club === currentUser?.club)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="events-grid" x-show="showAllEvents">
+                        <template x-if="allVisibleEvents.length === 0">
+                            <div class="event-card">
+                                <h3>No events available</h3>
+                                <p>Events will appear here once created.</p>
+                            </div>
+                        </template>
+                        <template x-for="event in allVisibleEvents" :key="event.id">
+                            <div class="event-card" :class="event.club">
+                                <div class="event-header">
+                                    <div class="event-time">
+                                        <i class="fas fa-clock"></i>
+                                        <span x-text="formatEventTime(event.date, event.time)"></span>
+                                    </div>
+                                    <div class="event-club-badge" x-text="getClubName(event.club)"></div>
+                                </div>
+                                <h3 x-text="event.name"></h3>
+                                <p x-text="event.description"></p>
+                                <div class="event-actions">
+                                    <button @click="showEventDetails(event)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button @click="editEvent(event)" x-show="isAdmin() || (isClubHead() && event.club === currentUser?.club)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>

@@ -34,6 +34,7 @@ function app() {
     selectedDayEvents: [],
     studentClubSelection: "",
     calendarView: "month",
+    showAllEvents: false,
     // Authentication & Membership
     currentUser: null,
     loginForm: { username: "", password: "" },
@@ -177,6 +178,25 @@ function app() {
 
     get weekdays() {
       return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    },
+
+    // Daily view helpers
+    get selectedDayEvents() {
+      if (!this.selectedDate) return [];
+      return this.getEventsForDate(this.selectedDate)
+        .slice()
+        .sort((a, b) => a.time.localeCompare(b.time));
+    },
+    get selectedDayCount() {
+      return this.selectedDayEvents.length;
+    },
+
+    get allVisibleEvents() {
+      const club = this.effectiveSelectedClub;
+      return this.events
+        .filter(e => (club === "all" || e.club === club))
+        .slice()
+        .sort((a, b) => (a.date + "T" + a.time).localeCompare(b.date + "T" + b.time));
     },
 
     // Role-aware selected club for visibility
@@ -653,6 +673,11 @@ function app() {
         }
       } else {
         this.currentPage = "login";
+      }
+
+      // Default daily view to today
+      if (!this.selectedDate) {
+        this.selectedDate = this.dateToLocalYMD(new Date());
       }
 
       // Check for upcoming events every minute
